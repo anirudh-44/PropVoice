@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "name": "The Vertex",
+    "neighborhood": "Downtown",
+    "price": 2200,
+    "bedrooms": 1,
+    "pet_friendly": true,
+    "description": "Modern high-rise 1-bedroom apartment in the heart of Downtown. Features floor-to-ceiling windows, stainless steel appliances, and a smart home thermostat. Building amenities include a rooftop pool, a 24/7 fitness center, and a pet washing station. Perfect for young professionals."
+  },
+  {
+    "id": 2,
+    "name": "Oakwood Townhomes",
+    "neighborhood": "Suburbs",
+    "price": 3100,
+    "bedrooms": 3,
+    "pet_friendly": true,
+    "description": "Spacious 3-bedroom family townhome located in a quiet suburban neighborhood. Includes a private fenced backyard, an attached two-car garage, and in-unit washer and dryer. Community features a playground and is walking distance to top-rated schools. Pets are welcome with no breed restrictions."
+  },
+  {
+    "id": 3,
+    "name": "Echo Lofts",
+    "neighborhood": "Arts District",
+    "price": 1800,
+    "bedrooms": 0,
+    "pet_friendly": false,
+    "description": "Industrial-style studio loft in the vibrant Arts District. Features exposed brick walls, polished concrete floors, and soaring 14-foot ceilings. Steps away from local coffee shops, galleries, and public transit. No pets allowed. Ideal for minimalist urban living."
+  },
+  {
+    "id": 4,
+    "name": "Riverside Oasis",
+    "neighborhood": "Waterfront",
+    "price": 4500,
+    "bedrooms": 2,
+    "pet_friendly": true,
+    "description": "Luxury 2-bedroom waterfront condo with panoramic river views. Premium finishes throughout, including quartz countertops, a wine fridge, and hardwood floors. Includes valet parking, a dedicated concierge desk, and a private balcony. Highly exclusive building."
+  }
+]
