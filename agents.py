@@ -121,7 +121,7 @@ scheduling_prompt = PromptTemplate(
     partial_variables={"format_instructions": scheduling_parser.get_format_instructions()},
 )
 
-scheduling_chain = scheduling_prompt | llm | scheduling_parser
+scheduling_chain = scheduling_prompt | model | scheduling_parser
 
 def scheduling_agent_node(state: AgentState):
     print("--- SCHEDULING AGENT: Processing Appointment Request ---")

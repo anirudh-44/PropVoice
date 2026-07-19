@@ -1,6 +1,6 @@
 from langgraph.graph import StateGraph, END
 from state import AgentState
-from agents import router_node, rag_agent_node
+from agents import router_node, rag_agent_node, scheduling_agent_node
 
 # Initialize the graph with our state schema
 workflow = StateGraph(AgentState)
@@ -8,6 +8,7 @@ workflow = StateGraph(AgentState)
 # Add our nodes to the graph
 workflow.add_node("router", router_node)
 workflow.add_node("rag_agent", rag_agent_node)
+workflow.add_node("scheduling_agent", scheduling_agent_node)
 
 # Set the entry point
 workflow.set_entry_point("router")
@@ -20,17 +21,18 @@ def route_after_analysis(state: AgentState):
     
     if state["next_node"] == "rag_agent":
         print("--- ROUTING TO: Property Search ---")
-        return "rag_agent"
+        return "rag_agent" # return the node (not the function)
         
     if state["next_node"] == "scheduling_agent":
         print("--- ROUTING TO: Booking ---")
-        return END # We will build the Scheduling agent on Day 6
+        return "scheduling_agent" # return the node (not the function)
 
 # Add conditional edges out of the router
 workflow.add_conditional_edges("router", route_after_analysis)
 
 # 2. The RAG Agent is terminal for now; once it answers, the conversation turn ends
 workflow.add_edge("rag_agent", END)
+workflow.add_edge("scheduling_agent", END)
 
 # Compile the graph into an executable application
 app = workflow.compile()
