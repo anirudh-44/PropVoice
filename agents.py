@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from state import AgentState
 from langchain_core.messages import AIMessage
 from db_utils import search_properties_vector
+from tools import check_availability, draft_booking
 
 load_dotenv()
 
@@ -59,6 +60,7 @@ def router_node(state: AgentState):
         "next_node": result["next_node"]
     }
 
+#---------------------------RAG AGENT---------------------------------------------------------------------
 # The prompt template that provides the retrieved context to the LLM
 rag_prompt = PromptTemplate(
     template="""You are a helpful, enthusiastic leasing concierge for a luxury property tech company.
@@ -94,4 +96,56 @@ def rag_agent_node(state: AgentState):
     # 3. Append the agent's response to the message history state
     return {
         "messages": [response]
+    }
+
+#------------------------------------Scheduling Agent------------------------------------------
+
+# Define the structured schema for scheduling extraction
+class SchedulingIntent(BaseModel):
+    action: str = Field(description="Either 'check_availability' if the user wants to see times, or 'book_tour' if they provided a specific time/date.")
+    property_name: str = Field(description="The name of the property (e.g., 'The Vertex', 'Echo Lofts'). Use 'Unknown' if not specified.")
+    date: str = Field(default="Tomorrow", description="The date requested for the tour.")
+    time: str = Field(default="2:00 PM", description="The time requested for the tour.")
+
+scheduling_parser = JsonOutputParser(pydantic_object=SchedulingIntent)
+
+scheduling_prompt = PromptTemplate(
+    template="""You are a leasing coordinator assistant for luxury apartments.
+    Extract the scheduling details from the user's request.
+    
+    User Input: {input}
+    
+    {format_instructions}
+    """,
+    input_variables=["input"],
+    partial_variables={"format_instructions": scheduling_parser.get_format_instructions()},
+)
+
+scheduling_chain = scheduling_prompt | llm | scheduling_parser
+
+def scheduling_agent_node(state: AgentState):
+    print("--- SCHEDULING AGENT: Processing Appointment Request ---")
+    latest_message = state["messages"][-1].content
+    
+    # 1. Extract structured parameters using the LLM
+    intent = scheduling_chain.invoke({"input": latest_message})
+    print(f"Extracted Scheduling Intent: {intent}")
+    
+    # 2. Execute the appropriate tool based on extracted action
+    if intent["action"] == "check_availability" or intent["property_name"] == "Unknown":
+        tool_result = check_availability(intent["property_name"])
+        response_text = f"{tool_result} Would you like me to draft a booking for one of these times?"
+        booking_payload = None
+    else:
+        # Execute the draft_booking tool
+        booking_payload = draft_booking(
+            property_name=intent["property_name"],
+            date=intent.get("date", "Tomorrow"),
+            time=intent.get("time", "2:00 PM")
+        )
+        response_text = f"I have drafted your tour for {intent['property_name']} on {intent.get('date', 'Tomorrow')} at {intent.get('time', '2:00 PM')}. Please confirm if you would like me to finalize this appointment."
+        
+    return {
+        "messages": [response_text],
+        "booking_details": booking_payload
     }
