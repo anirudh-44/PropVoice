@@ -149,3 +149,20 @@ def scheduling_agent_node(state: AgentState):
         "messages": [response_text],
         "booking_details": booking_payload
     }
+
+# --------------------------------HITL node Function ---------------------------------------------------
+
+def finalize_booking_node(state: AgentState):
+    print("--- SYSTEM: Human approved! Finalizing database write... ---")
+    payload = state.get("booking_details")
+    
+    # Here you would normally write to your SQL database table
+    confirmation_message = (
+        f"SUCCESS! Your tour for {payload['property_name']} on {payload['date']} "
+        f"at {payload['time']} has been officially confirmed and added to the calendar."
+    )
+    
+    return {
+        "messages": [confirmation_message],
+        "booking_details": {**payload, "status": "CONFIRMED"}
+    }
