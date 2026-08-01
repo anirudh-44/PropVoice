@@ -8,6 +8,7 @@ from state import AgentState
 from langchain_core.messages import AIMessage
 from db_utils import search_properties_vector
 from tools import check_availability, draft_booking
+from database import SessionLocal, BookingRecord
 
 load_dotenv()
 
@@ -156,10 +157,24 @@ def finalize_booking_node(state: AgentState):
     print("--- SYSTEM: Human approved! Finalizing database write... ---")
     payload = state.get("booking_details")
     
-    # Here you would normally write to your SQL database table
+    # Write the confirmed booking to PostgreSQL
+    session = SessionLocal()
+    try:
+        new_booking = BookingRecord(
+            property_name=payload["property_name"],
+            date=payload["date"],
+            time=payload["time"],
+            user_name=payload.get("user_name", "Prospective Tenant"),
+            status="CONFIRMED"
+        )
+        session.add(new_booking)
+        session.commit()
+    finally:
+        session.close()
+
     confirmation_message = (
         f"SUCCESS! Your tour for {payload['property_name']} on {payload['date']} "
-        f"at {payload['time']} has been officially confirmed and added to the calendar."
+        f"at {payload['time']} has been permanently saved to the database."
     )
     
     return {
