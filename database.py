@@ -26,6 +26,17 @@ class PropertyListing(Base):
     # We use a dimension of 384, which matches the BAAI/bge-small-en-v1.5 embedding model
     embedding = Column(Vector(384))
 
+# table to store the confirmed tours
+class BookingRecord(Base):
+    __tablename__ = "bookings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    property_name = Column(String, index=True)
+    date = Column(String)
+    time = Column(String)
+    user_name = Column(String)
+    status = Column(String)
+
 # Create the table and enable the vector extension
 def init_db():
     with engine.connect() as conn:
