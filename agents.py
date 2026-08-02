@@ -14,7 +14,7 @@ load_dotenv()
 
 # Initialize the LLM
 llm = HuggingFaceEndpoint(
-    repo_id="Qwen/Qwen2.5-7B-Instruct",
+    repo_id="deepseek-ai/DeepSeek-V4-Flash", #Qwen/Qwen2.5-7B-Instruct
     temperature=0.1,
     max_new_tokens=400,
     task='conversational'
