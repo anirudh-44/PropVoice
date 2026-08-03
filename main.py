@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import Response
 from twilio.twiml.voice_response import VoiceResponse, Gather
@@ -14,10 +15,26 @@ VOICE_CONFIG = {"configurable": {"thread_id": "twilio_voice_thread"}}
 async def root():
     return {"message": "PropVoice Backend is Running", "status": "Healthy"}
 
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    # Returns an empty 204 No Content response to satisfy the browser
+    return Response(status_code=204)
+
 @app.post("/twillio/voice")
 async def twilio_voice_webhook(request: Request):
     """Handles incoming calls and Speech-to-Text from Twilio"""
     form_data = await request.form()
+
+    # 1. Capture the unique CallSid and update the existing VOICE_CONFIG
+    call_sid = form_data.get("CallSid", "twilio_voice_thread")
+
+    # Save the CallSid to tracker file so Streamlit can find it
+    with open("active_threads.txt", "a+") as f:
+        f.seek(0)
+        if call_sid not in f.read():
+            f.write(call_sid + "\n")
+            
+    VOICE_CONFIG["configurable"]["thread_id"] = call_sid 
     
     # 'SpeechResult' contains the transcribed text from the caller
     user_speech = form_data.get("SpeechResult")
@@ -26,7 +43,7 @@ async def twilio_voice_webhook(request: Request):
     ACTION_URL = "https://denial-clergyman-goatskin.ngrok-free.dev/twillio/voice"
     
     if user_speech:
-        print(f"--- INCOMING VOICE QUERY: {user_speech} ---")
+        print(f"--- INCOMING VOICE QUERY [{call_sid}]: {user_speech} ---")
         
         # Pass the transcribed text into our LangGraph
         initial_state = {"messages": [HumanMessage(content=user_speech)]}
@@ -44,7 +61,7 @@ async def twilio_voice_webhook(request: Request):
             if hasattr(ai_text, 'content'):
                 ai_text = ai_text.content
 
-        # Create a Gather block for ongoing conversation using the absolute URL
+            # Create a Gather block for ongoing conversation using the absolute URL
             gather = Gather(input="speech", action=ACTION_URL, timeout=3)
             gather.say(ai_text, voice="Polly.Matthew-Neural")
             response.append(gather)
