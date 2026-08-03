@@ -1,6 +1,7 @@
 import streamlit as st
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage,AIMessage
 from graph import app as agent_graph
+import os
 
 st.set_page_config(page_title="PropVoice Concierge", layout="wide")
 
@@ -17,25 +18,69 @@ st.title("PropVoice Agentic Concierge")
 # Sidebar for Admin / HITL Approvals
 with st.sidebar:
     st.header("Admin Dashboard")
+    
+    # Add a manual refresh button so the admin can pull new calls without typing
+    st.button("🔄 Refresh Pending Tours")
     st.subheader("Pending Approvals")
     
-    # Check current graph state
-    current_state = agent_graph.get_state(config)
-    if current_state.next and "finalize_booking" in current_state.next:
-        pending_payload = current_state.values.get("booking_details")
-        st.warning(f"Pending Tour: {pending_payload['property_name']}")
-        st.write(f"Date: {pending_payload['date']} | Time: {pending_payload['time']}")
+    # 1. Gather all known thread IDs (Streamlit's own + Twilio's)
+    threads_to_check = [st.session_state.thread_id]
+    if os.path.exists("active_threads.txt"):
+        with open("active_threads.txt", "r") as f:
+            for line in f.read().splitlines():
+                if line and line not in threads_to_check:
+                    threads_to_check.append(line)
+                    
+    pending_count = 0
+    
+    # 2. Loop through every thread to check for pending approvals
+    for tid in threads_to_check:
+        cfg = {"configurable": {"thread_id": tid}}
+        current_state = agent_graph.get_state(cfg)
         
-        if st.button("Approve Tour", type="primary"):
-            with st.spinner("Writing to database..."):
-                # Resume the graph from the breakpoint
-                for _ in agent_graph.stream(None, config):
-                    pass
-                final_state = agent_graph.get_state(config)
-                st.success("Tour Confirmed & Saved!")
-                st.session_state.messages.append({"role": "assistant", "content": final_state.values["messages"][-1]})
-                st.rerun()
-    else:
+        # If this specific thread is paused for database approval
+        if current_state.next and "finalize_booking" in current_state.next:
+            pending_count += 1
+            #pending_payload = current_state.values.get("booking_details", {})
+            # FIX 1: Add 'or {}' to guarantee it is a dictionary, even if the state holds 'None'
+            pending_payload = current_state.values.get("booking_details") or {}
+            
+            # Use a container to visually separate multiple pending requests
+            with st.container(border=True):
+                st.warning(f"🏡 {pending_payload.get('property_name', 'Unknown')}")
+                st.write(f"**Date:** {pending_payload.get('date')} | **Time:** {pending_payload.get('time')}")
+                st.caption(f"Call/Thread ID: {tid}")
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    # Unique key prevents Duplicate Widget Error
+                    if st.button("Approve", key=f"approve_{tid}", type="primary", use_container_width=True):
+                        with st.spinner("Writing to database..."):
+                            for _ in agent_graph.stream(None, cfg):
+                                pass
+                            final_state = agent_graph.get_state(cfg)
+                            st.success("Tour Confirmed!")
+                            
+                            # Only update the local chat UI if it's the Streamlit text thread
+                            if tid == st.session_state.thread_id:
+                                st.session_state.messages.append({"role": "assistant", "content": final_state.values["messages"][-1]})
+                            st.rerun()
+                            
+                with col2:
+                    if st.button("Reject", key=f"reject_{tid}", type="secondary", use_container_width=True):
+                        rejection_text = "Your request was declined by an administrator. Please select another time or property."
+                        agent_graph.update_state(
+                            cfg,
+                            {"messages": [AIMessage(content=rejection_text)], "booking_details": None},
+                            as_node="finalize_booking"
+                        )
+                        st.error("Declined.")
+                        if tid == st.session_state.thread_id:
+                            st.session_state.messages.append({"role": "assistant", "content": rejection_text})
+                        st.rerun()
+                        
+    if pending_count == 0:
         st.info("No pending tours require approval.")
 
 # Main Chat Interface
