@@ -2,11 +2,11 @@ from langgraph.graph import StateGraph, END
 from state import AgentState
 from agents import router_node, rag_agent_node, scheduling_agent_node, finalize_booking_node
 from langgraph.checkpoint.memory import MemorySaver
+import sqlite3
+from langgraph.checkpoint.sqlite import SqliteSaver
 
 # Initialize the graph with our state schema
 workflow = StateGraph(AgentState)
-# Initialize an in-memory checkpointer
-memory = MemorySaver()
 
 #1. Add our nodes to the graph
 workflow.add_node("router", router_node)
@@ -40,8 +40,11 @@ workflow.add_edge("rag_agent", END)
 workflow.add_edge("scheduling_agent", "finalize_booking")
 workflow.add_edge("finalize_booking", END)
 
-# 3. Compile the graph with a checkpointer AND an interruption breakpoint
-memory = MemorySaver()
+# 3. Create a persistent SQLite checkpointer connected to a shared file
+# We use check_same_thread=False because FastAPI (uvicorn) and Streamlit 
+# will access this file from different processes/threads.
+conn = sqlite3.connect("shared_memory.sqlite", check_same_thread=False)
+memory = SqliteSaver(conn)
 
 # Compile the graph into an executable application
 app = workflow.compile(
