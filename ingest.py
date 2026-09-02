@@ -2,7 +2,7 @@ import json
 import os
 from dotenv import load_dotenv
 from langchain_huggingface import HuggingFaceEndpointEmbeddings
-from database import SessionLocal, PropertyListing
+from database import SessionLocal, PropertyListing, BookingRecord, Base, engine
 
 load_dotenv()
 
@@ -54,4 +54,7 @@ def load_data():
     print("All data successfully stored in PGVector!")
 
 if __name__ == "__main__":
+    print("Creating tables in cloud database if they do not exist...")
+    Base.metadata.create_all(bind=engine)
+    print("Tables verified. Ingesting data...")
     load_data()
