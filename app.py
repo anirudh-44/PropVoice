@@ -3,6 +3,18 @@ from langchain_core.messages import HumanMessage,AIMessage
 from graph import app as agent_graph
 import os
 
+# Force Streamlit Cloud secrets into standard OS environment variables
+if "DATABASE_URL" in st.secrets:
+    os.environ["DATABASE_URL"] = st.secrets["DATABASE_URL"]
+if "HUGGINGFACEHUB_API_TOKEN" in st.secrets:
+    os.environ["HUGGINGFACEHUB_API_TOKEN"] = st.secrets["HUGGINGFACEHUB_API_TOKEN"]
+if "LANGCHAIN_API_KEY" in st.secrets:
+    os.environ["LANGCHAIN_API_KEY"] = st.secrets["LANGCHAIN_API_KEY"]
+if "LANGCHAIN_TRACING_V2" in st.secrets:
+    os.environ["LANGCHAIN_TRACING_V2"] = st.secrets["LANGCHAIN_TRACING_V2"]
+
+from graph import app as agent_graph
+
 st.set_page_config(page_title="PropVoice Concierge", layout="wide")
 
 # Initialize session state for the LangGraph thread
